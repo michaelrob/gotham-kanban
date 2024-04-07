@@ -1,0 +1,21 @@
+<h1>Task board</h1>
+
+board name: <%= board.name %>
+
+<div class="flex space-x-4">
+  <% board.columns.each do |column| %>
+    <div id="column" class="w-82 px-4 py-2 border-solid border-2 rounded-lg shadow-lg text-center">
+      <div><%= column.name %></div>
+
+      <% column.tasks.each do |task| %>
+        <div id="task" class="text-left border-solid border-2 rounded-lg px-4 py-2 my-4">
+          <div id="task-id"><%= task.id %></div>
+          <div id="task-name"><%= task.name %></div>
+          <div id="task-description"><%= task.description %></div>
+
+          <%= link_to "more...", task_path(task), class: "btn btn--light" %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,5 @@
+<%= link_to 'Back', '#', onclick: 'history.back();return false;', class: "btn btn-secondary" %>
+
+<h1><%= task.name %></h1>
+
+<%= render "form", quote: task %>
