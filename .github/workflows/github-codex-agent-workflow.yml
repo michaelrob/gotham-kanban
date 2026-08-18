@@ -1,0 +1,54 @@
+# Copy this file to .github/workflows/bugherd-codex-agent.yml in the connected repository.
+# Add OPENAI_API_KEY as a GitHub Actions repository or organization secret.
+name: BugHerd Codex agent
+
+on:
+  repository_dispatch:
+    types: [bugherd_codex_task]
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.client_payload.base_branch || github.event.repository.default_branch }}
+
+      # Install project dependencies before this step when Codex needs them. Its default
+      # sandbox does not allow arbitrary network access during the agent run.
+      - name: Implement BugHerd task with Codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt: ${{ github.event.client_payload.prompt }}
+          sandbox: workspace-write
+
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUGHERD_TASK_NUMBER: ${{ github.event.client_payload.bugherd_task_number }}
+          GITHUB_ISSUE_URL: ${{ github.event.client_payload.github_issue_url }}
+          BASE_BRANCH: ${{ github.event.client_payload.base_branch || github.event.repository.default_branch }}
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "Codex completed without changing the repository."
+            exit 0
+          fi
+
+          branch="codex/bugherd-${BUGHERD_TASK_NUMBER}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add --all
+          git commit -m "Implement ${BUGHERD_TASK_NUMBER}"
+          git push --set-upstream origin "$branch"
+          gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$branch" \
+            --title "Implement ${BUGHERD_TASK_NUMBER}" \
+            --body "Implements the BugHerd task described in ${GITHUB_ISSUE_URL}."
+
